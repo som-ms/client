@@ -1,14 +1,14 @@
 const io = require("socket.io-client");
 const socket = io("ws://localhost:3000");
 var constants = require("./constants");
-const { appInsightKey } = require("./config");
+const config = require("./config");
 const appInsights = require("applicationinsights");
 const ConnectMessage = require("./ConnectMessage");
 const MessageReceived = require("./MessageReceived");
 
 var myargs = process.argv.slice(2); // channelName
 var channelName = myargs[0];
-appInsights.setup(appInsightKey).start();
+appInsights.setup(config.appInsightKey).start();
 var client = appInsights.defaultClient;
 
 var messageBatchReceived = 0;
@@ -28,8 +28,9 @@ socket.on("connect", () => {
 
 // handle the event sent with socket.send()
 socket.on("ops", (data) => {
-  console.log("message via message event" + data);
+  // console.log("message via message event" + data);
   var message = JSON.parse(data);
+  console.log("received: " + message.content);
   processMessage(message);
   totalMessageReceived++;
   messageBatchReceived++;
@@ -89,19 +90,21 @@ function sendMetric() {
   var currentTime = Date.now();
   processStoredElements(currentTime);
   var propertySet = {
-    totalMessageReceived: totalMessageReceived,
-    lostMessages: lostMessages,
-    messageBatchReceived: messageBatchReceived,
-    channelId: channelName,
+    "totalMessageReceived": totalMessageReceived,
+    "lostMessages": lostMessages,
+    "messageBatchReceived": messageBatchReceived,
+    "channelId": channelName
   };
   var metrics = {
-    lostMessages: lostMessages,
-    MessageBatchReceived: messageBatchReceived,
+    "lostMessages": lostMessages,
+    "MessageBatchReceived": messageBatchReceived
   };
+  // console.log("properties: " + JSON.stringify(propertySet));
+  // console.log("metrics: " + JSON.stringify(metrics));
   client.trackEvent({
     name: "subEvents",
     properties: propertySet,
-    measurements: metrics,
+    measurements: metrics
   });
   resetValues();
 }
