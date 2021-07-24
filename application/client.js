@@ -11,13 +11,19 @@ var channelName = myargs[0];
 appInsights.setup(appInsightKey).start();
 var client = appInsights.defaultClient;
 
+var messageBatchReceived = 0;
+var totalMessageReceived = 0;
+var lostMessages = 0;
+var sequence = -1;
+var mySet = new Set();
+let myMap = new Map();
+
 socket.on("connect", () => {
   var connMessage = new ConnectMessage(socket.id, channelName);
   socket.emit("connMessage", JSON.stringify(connMessage));
   console.log("client connected");
   // send the telemetry
-  //client.trackMetric({ name: "socketConnected", value: 1.0 });
-  //
+  client.trackMetric({ name: "socketConnected", value: 1.0 });
 });
 
 // handle the event sent with socket.send()
@@ -25,6 +31,8 @@ socket.on("ops", (data) => {
   console.log("message via message event" + data);
   var message = JSON.parse(data);
   processMessage(message);
+  totalMessageReceived++;
+  messageBatchReceived++;
   // process the message with the logic
 });
 
@@ -32,12 +40,6 @@ socket.on("disconnect", (reason) => {
   console.log("disconnect client");
   client.trackMetric({ name: "socketDisconnected", value: 1.0 });
 });
-
-var messageBatchReceived = 0;
-var lostMessages = 0;
-var sequence = -1;
-var mySet = new Set();
-let myMap = new Map();
 
 function processMessage(messageObject) {
   if (isNumberInSequence(messageObject.content)) {
@@ -91,7 +93,6 @@ function sendMetric() {
     lostMessages: lostMessages,
     messageBatchReceived: messageBatchReceived,
     channelId: channelName,
-    subscriberId: subscriberId,
   };
   var metrics = {
     lostMessages: lostMessages,
